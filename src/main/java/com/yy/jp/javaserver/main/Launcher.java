@@ -14,6 +14,7 @@ import com.yy.jp.javaserver.clazz.ClazzLoader;
 import com.yy.jp.javaserver.config.ServerConfig;
 import com.yy.jp.javaserver.exceptions.FileFormatException;
 import com.yy.jp.javaserver.spring.ioc.BeanFactory;
+import com.yy.jp.javaserver.support.route.InitRoute;
 import com.yy.jp.javaserver.support.server.BasicServerBootstrap;
 import com.yy.jp.javaserver.support.server.DefaultServerBootstrap;
 import com.yy.jp.javaserver.util.Constants;
@@ -43,6 +44,8 @@ public class Launcher {
 		}
 		String springConfigPath = config.getProperty(Constants.springConfig, "spring/applicationcontext.xml");
 		BeanFactory.init(springConfigPath);
+		//
+		InitRoute.initRoute();
 		BasicServerBootstrap basicServerBootstrap;
 		try{
 			basicServerBootstrap = BeanFactory.getInstance(BasicServerBootstrap.class);

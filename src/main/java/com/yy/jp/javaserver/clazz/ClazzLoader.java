@@ -1,5 +1,6 @@
 package com.yy.jp.javaserver.clazz;
 
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -18,5 +19,9 @@ public class ClazzLoader {
 			LOG.info(c);
 		}
 		LOG.info("加载类===============end");
+	}
+	
+	public static Set<Class<?>> getAllClass(){
+		return Collections.unmodifiableSet(allClasses);
 	}
 }
