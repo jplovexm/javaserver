@@ -6,7 +6,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 
 import com.yy.jp.javaserver.config.ServerConfig;
-import com.yy.jp.javaserver.support.handler.SimpleServerHandler;
+import com.yy.jp.javaserver.support.handler.DiffRequestHandler;
 import com.yy.jp.javaserver.support.handler.in.IdleChannelClosehandler;
 import com.yy.jp.javaserver.support.handler.in.IpFilterhandler;
 import com.yy.jp.javaserver.support.server.BasicServerBootstrap;
@@ -23,17 +23,16 @@ import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.handler.timeout.IdleStateHandler;
 
 public class ServerChannelInitializer extends ChannelInitializer<Channel> {
+	
 	private static final Logger LOG = Logger.getLogger(ServerChannelInitializer.class);
 	private BasicServerBootstrap basicServerBootstrap;
 	private int idleTimeout;
-	private int maxLenght;
 	private static IpFilterhandler ipFilterHanlder;
 	
 	public ServerChannelInitializer(BasicServerBootstrap basicServerBootstrap,
 			int idleTimeout, int maxLenght) {
 		this.basicServerBootstrap = basicServerBootstrap;
 		this.idleTimeout = idleTimeout;
-		this.maxLenght = maxLenght;
 		if (!StringUtils.equals(ServerConfig.serverConfig.getProperty(Constants.ipfilter), "false")) {
 			ipFilterHanlder = new IpFilterhandler();
 		}
@@ -43,6 +42,7 @@ public class ServerChannelInitializer extends ChannelInitializer<Channel> {
 	@Override
 	protected void initChannel(Channel ch) throws Exception {
 		// TODO Auto-generated method stub
+		LOG.info("initChannel 注册channel:"+ch);
 		basicServerBootstrap.registerChannel(ch);
 		ch.pipeline().addLast("log",new LoggingHandler(LogLevel.INFO))
 						  .addLast("idle",new IdleStateHandler(0, 0, idleTimeout, TimeUnit.SECONDS))
@@ -56,7 +56,8 @@ public class ServerChannelInitializer extends ChannelInitializer<Channel> {
         ch.pipeline().addLast(new HttpResponseEncoder());
         ch.pipeline().addLast("http-aggregator", new HttpObjectAggregator(65536));  
         ch.pipeline().addLast("http-chunked", new ChunkedWriteHandler());
-        ch.pipeline().addLast("SimpleServerHandler",new SimpleServerHandler());
+        
+        ch.pipeline().addLast(DiffRequestHandler.NAME_FOR_PIPELINE,new DiffRequestHandler());
 	}
 
 }
