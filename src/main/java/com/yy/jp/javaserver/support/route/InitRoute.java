@@ -10,6 +10,7 @@ import java.util.Set;
 import com.yy.jp.javaserver.clazz.ClazzLoader;
 import com.yy.jp.javaserver.exceptions.RouteConfigRuntimeException;
 import com.yy.jp.javaserver.support.annotation.HAction;
+import com.yy.jp.javaserver.support.annotation.HSync;
 import com.yy.jp.javaserver.support.annotation.MethodExe;
 
 public class InitRoute {
@@ -25,8 +26,9 @@ public class InitRoute {
 				for(Method method : methods){
 					if(Modifier.isPublic(method.getDeclaringClass().getModifiers())){
 						MethodExe me = method.getAnnotation(MethodExe.class);
+						HSync sync = method.getAnnotation(HSync.class);
 						if(null != me){
-							addRoute(me,method,clazz);
+							addRoute(me,method,clazz,sync);
 						}
 					}
 				}
@@ -36,9 +38,13 @@ public class InitRoute {
 		NOT_MODIFY_ROUTES = Collections.unmodifiableMap(routes);
 	}
 	
-	public static void addRoute(MethodExe me,Method m,Class<?> clazz){
+	public static void addRoute(MethodExe me,Method m,Class<?> clazz,HSync sync){
 		checkExists(me);
-		routes.put(me.name(), new Route(me.name(), clazz, m));
+		Route  route = new Route(me.name(), clazz, m);
+		if(null!=sync){
+			route.setAysnc(true);
+		}
+		routes.put(me.name(),route);
 	}
 	
 	private static void checkExists(MethodExe me){

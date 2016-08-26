@@ -32,12 +32,14 @@ public class DefaultServerBootstrap extends BasicServerBootstrap {
 		final int maxLength = getMaxLengthRequestBody(); 
 		EventLoopGroup acceptGroup = new NioEventLoopGroup(this.getAcceptThreadNumber(), new DefaultThreadFactory("accept-group"));
 		EventLoopGroup workGroup = new NioEventLoopGroup(this.getWorkThreadNumber(), new DefaultThreadFactory("work-group"));
+		EventLoopGroup processGroup = new NioEventLoopGroup(this.getWorkThreadNumber(), new DefaultThreadFactory("process-group"));
 		addEventLoopGroup(acceptGroup);
 		addEventLoopGroup(workGroup);
+		addEventLoopGroup(processGroup);
 		try {
 			ServerBootstrap server = new ServerBootstrap();
 			server.group(acceptGroup, workGroup).channel(NioServerSocketChannel.class)
-			.childHandler(new ServerChannelInitializer(this,idleTimeout,maxLength)).childOption(ChannelOption.SO_KEEPALIVE, true);
+			.childHandler(new ServerChannelInitializer(this,idleTimeout,maxLength,processGroup)).childOption(ChannelOption.SO_KEEPALIVE, true);
 			ChannelFuture furute = server.bind(host, port);
 			furute.addListeners(new ChannelFutureListener() {
 				public void operationComplete(ChannelFuture future) throws Exception {

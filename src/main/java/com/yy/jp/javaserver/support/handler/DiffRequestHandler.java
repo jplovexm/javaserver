@@ -1,6 +1,7 @@
 package com.yy.jp.javaserver.support.handler;
 
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -12,6 +13,13 @@ import io.netty.util.ReferenceCountUtil;
 
 public class DiffRequestHandler extends SimpleChannelInboundHandler<Object> {
 	public static final String NAME_FOR_PIPELINE = "DiffRequestHandler";
+	private EventLoopGroup processGroup;
+	
+	public DiffRequestHandler(EventLoopGroup processGroup) {
+		super();
+		this.processGroup = processGroup;
+	}
+
 	@Override
 	protected void channelRead0(ChannelHandlerContext ctx, Object msg)
 			throws Exception {
@@ -27,7 +35,7 @@ public class DiffRequestHandler extends SimpleChannelInboundHandler<Object> {
 		        	handshaker.handshake(ctx.channel(), req);
 		        }
 			}else{
-				ctx.pipeline().addAfter(NAME_FOR_PIPELINE, SimpleServerHandler.class.getName(), new SimpleServerHandler());
+				ctx.pipeline().addAfter(NAME_FOR_PIPELINE, SimpleServerHandler.class.getName(), new SimpleServerHandler(processGroup));
 				ReferenceCountUtil.retain(msg);
 				ctx.fireChannelRead(msg);
 			}

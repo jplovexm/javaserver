@@ -11,6 +11,7 @@ public class Route {
 	private String name;
 	private Class<?> clazz;
 	private Method method;
+	private boolean isAysnc;
 	public Route(String name, Class<?> clazz, Method method) {
 		super();
 		this.name = name;
@@ -25,6 +26,13 @@ public class Route {
 	}
 	public Method getMethod() {
 		return method;
+	}
+	
+	public boolean isAysnc() {
+		return isAysnc;
+	}
+	public void setAysnc(boolean isAysnc) {
+		this.isAysnc = isAysnc;
 	}
 	@Override
 	public String toString() {

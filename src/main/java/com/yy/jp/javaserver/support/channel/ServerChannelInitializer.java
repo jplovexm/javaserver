@@ -14,6 +14,7 @@ import com.yy.jp.javaserver.util.Constants;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.EventLoopGroup;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
@@ -28,11 +29,13 @@ public class ServerChannelInitializer extends ChannelInitializer<Channel> {
 	private BasicServerBootstrap basicServerBootstrap;
 	private int idleTimeout;
 	private static IpFilterhandler ipFilterHanlder;
+	private  EventLoopGroup processGroup;
 	
 	public ServerChannelInitializer(BasicServerBootstrap basicServerBootstrap,
-			int idleTimeout, int maxLenght) {
+			int idleTimeout, int maxLenght,EventLoopGroup processGroup) {
 		this.basicServerBootstrap = basicServerBootstrap;
 		this.idleTimeout = idleTimeout;
+		this.processGroup = processGroup;
 		if (!StringUtils.equals(ServerConfig.serverConfig.getProperty(Constants.ipfilter), "false")) {
 			ipFilterHanlder = new IpFilterhandler();
 		}
@@ -57,7 +60,7 @@ public class ServerChannelInitializer extends ChannelInitializer<Channel> {
         ch.pipeline().addLast("http-aggregator", new HttpObjectAggregator(65536));  
         ch.pipeline().addLast("http-chunked", new ChunkedWriteHandler());
         
-        ch.pipeline().addLast(DiffRequestHandler.NAME_FOR_PIPELINE,new DiffRequestHandler());
+        ch.pipeline().addLast(DiffRequestHandler.NAME_FOR_PIPELINE,new DiffRequestHandler(processGroup));
 	}
 
 }

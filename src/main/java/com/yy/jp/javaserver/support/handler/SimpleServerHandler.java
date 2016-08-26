@@ -10,6 +10,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -27,6 +28,7 @@ import java.util.Map;
 import org.apache.log4j.Logger;
 
 import com.yy.jp.javaserver.spring.ioc.BeanFactory;
+import com.yy.jp.javaserver.support.async.HandlerCallback;
 import com.yy.jp.javaserver.support.request.SimpleRequest;
 import com.yy.jp.javaserver.support.response.ReturnType;
 import com.yy.jp.javaserver.support.response.SimpleResponse;
@@ -39,10 +41,17 @@ public class SimpleServerHandler extends SimpleChannelInboundHandler<FullHttpReq
 	private static final Logger LOG = Logger.getLogger(SimpleServerHandler.class);
 	private static Map<String,Route> routes = InitRoute.getRoutes();
 	private String uri;
+	private EventLoopGroup processGroup;
+	
+	public SimpleServerHandler(EventLoopGroup processGroup) {
+		super();
+		this.processGroup = processGroup;
+	}
+
 	@Override
-	protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest  request)
+	protected void channelRead0(final ChannelHandlerContext ctx, FullHttpRequest  request)
 			throws Exception {
-				SimpleRequest req = new SimpleRequest();
+				final SimpleRequest req = new SimpleRequest();
 				uri = request.getUri();
 				if(request.getMethod() == HttpMethod.GET){
 					QueryStringDecoder decoder = new QueryStringDecoder(request.getUri());
@@ -65,17 +74,49 @@ public class SimpleServerHandler extends SimpleChannelInboundHandler<FullHttpReq
 					return;
 				}
 	            if(routes.containsKey(uri)){
-	            	Route route = routes.get(uri);
-	            	Object obj = BeanFactory.getInstance(route.getClazz());
-	            	Object result = route.getMethod().invoke(obj, req);
-	            	SimpleResponse res = (SimpleResponse)result;
-	            	FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK); // 响应
-	        		response.headers().set(CONTENT_TYPE, getContentType(res.getRenderType())); 
-	        		ByteBuf responseContentByteBuf = Unpooled.copiedBuffer(res.getRederData().getBytes(Charset.forName("utf-8")));  
-	        		response.headers().set(CONTENT_LENGTH, responseContentByteBuf.readableBytes());
-	        		response.content().writeBytes(responseContentByteBuf);  
-	        	    responseContentByteBuf.release();
-	            	ctx.channel().writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
+	            	final Route route = routes.get(uri);
+	            	if(route.isAysnc()){
+	            		final EventLoopGroup loopGroup = processGroup==null?ctx.channel().eventLoop().parent():processGroup;
+		            	loopGroup.execute(new Runnable() {
+							public void run() {
+								try{
+					            	Object obj = BeanFactory.getInstance(route.getClazz());
+					            	final HandlerCallback call = new HandlerCallback() {
+										public void fail(Throwable e) {
+											// TODO Auto-generated method stub
+											ctx.fireExceptionCaught(e);
+										}
+										public void complete(Object result) {
+											// TODO Auto-generated method stub
+											SimpleResponse res = (SimpleResponse)result;
+							            	FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK); // 响应
+							        		response.headers().set(CONTENT_TYPE, getContentType(res.getRenderType())); 
+							        		ByteBuf responseContentByteBuf = Unpooled.copiedBuffer(res.getRederData().getBytes(Charset.forName("utf-8")));  
+							        		response.headers().set(CONTENT_LENGTH, responseContentByteBuf.readableBytes());
+							        		response.content().writeBytes(responseContentByteBuf);  
+							        	    responseContentByteBuf.release();
+							            	ctx.channel().writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
+										}
+									};
+									Object[] args = new Object[] { req, call };
+					            	route.getMethod().invoke(obj, args);
+								}catch(Exception e){
+									ctx.fireExceptionCaught(e);
+								}
+							}
+						});
+					}else{
+						Object obj = BeanFactory.getInstance(route.getClazz());
+		            	Object result = route.getMethod().invoke(obj, req);
+		            	SimpleResponse res = (SimpleResponse)result;
+		            	FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK); // 响应
+		        		response.headers().set(CONTENT_TYPE, getContentType(res.getRenderType())); 
+		        		ByteBuf responseContentByteBuf = Unpooled.copiedBuffer(res.getRederData().getBytes(Charset.forName("utf-8")));  
+		        		response.headers().set(CONTENT_LENGTH, responseContentByteBuf.readableBytes());
+		        		response.content().writeBytes(responseContentByteBuf);  
+		        	    responseContentByteBuf.release();
+		            	ctx.channel().writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
+					}
 	            }else{
 	            	LOG.warn("处理请求uri:"+uri + "404");
 	            	ctx.channel().writeAndFlush("404").addListener(ChannelFutureListener.CLOSE);
